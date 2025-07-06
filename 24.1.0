@@ -1,0 +1,11 @@
+Defaulting to user installation because normal site-packages is not writeable
+Requirement already satisfied: aiofiles in c:\users\mahap\appdata\roaming\python\python312\site-packages (23.2.1)
+Collecting aiofiles
+  Using cached aiofiles-24.1.0-py3-none-any.whl.metadata (10 kB)
+Using cached aiofiles-24.1.0-py3-none-any.whl (15 kB)
+Installing collected packages: aiofiles
+  Attempting uninstall: aiofiles
+    Found existing installation: aiofiles 23.2.1
+    Uninstalling aiofiles-23.2.1:
+      Successfully uninstalled aiofiles-23.2.1
+Successfully installed aiofiles-24.1.0

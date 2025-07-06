@@ -1,0 +1,519 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard - Twitter Hoax Detector{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h1><i class="fas fa-tachometer-alt"></i> Dashboard</h1>
+            <div>
+                <button class="btn btn-primary" onclick="refreshStats()">
+                    <i class="fas fa-sync-alt"></i> Refresh
+                </button>
+                <a href="/analyze" class="btn btn-success">
+                    <i class="fas fa-plus"></i> Analisis Baru
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Statistics Cards -->
+<div class="row" id="statsCards">
+    <div class="col-md-3">
+        <div class="stats-card">
+            <h3 id="totalAnalyses">-</h3>
+            <p><i class="fas fa-chart-line"></i> Total Analisis</p>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="stats-card" style="background: linear-gradient(135deg, #ff6b6b, #ee5a24);">
+            <h3 id="hoaxCount">-</h3>
+            <p><i class="fas fa-exclamation-triangle"></i> Hoax Terdeteksi</p>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="stats-card" style="background: linear-gradient(135deg, #feca57, #ff9ff3);">
+            <h3 id="botCount">-</h3>
+            <p><i class="fas fa-robot"></i> Bot Terdeteksi</p>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="stats-card" style="background: linear-gradient(135deg, #48dbfb, #0abde3);">
+            <h3 id="recentAnalyses">-</h3>
+            <p><i class="fas fa-clock"></i> Analisis Bulan Ini</p>
+        </div>
+    </div>
+</div>
+
+<!-- Quick Analysis -->
+<div class="row mt-4">
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-header">
+                <h5><i class="fas fa-search"></i> Analisis Cepat</h5>
+            </div>
+            <div class="card-body">
+                <form id="quickAnalysisForm">
+                    <div class="mb-3">
+                        <label for="tweetUrl" class="form-label">URL Tweet</label>
+                        <input type="url" class="form-control" id="tweetUrl" 
+                               placeholder="https://twitter.com/username/status/1234567890"
+                               required>
+                    </div>
+                    <button type="submit" class="btn btn-primary btn-lg">
+                        <i class="fas fa-play"></i> Mulai Analisis
+                    </button>
+                </form>
+                
+                <!-- Progress Bar -->
+                <div id="analysisProgress" class="mt-3" style="display: none;">
+                    <div class="progress mb-3">
+                        <div class="progress-bar" role="progressbar" style="width: 0%"></div>
+                    </div>
+                    <div class="text-center">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                        <p class="mt-2" id="progressText">Memulai analisis...</p>
+                    </div>
+                </div>
+                
+                <!-- Results -->
+                <div id="quickResults" class="mt-3" style="display: none;">
+                    <hr>
+                    <h6>Hasil Analisis Cepat:</h6>
+                    <div id="resultsContent"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-4">
+        <div class="card">
+            <div class="card-header">
+                <h5><i class="fas fa-chart-pie"></i> Statistik</h5>
+            </div>
+            <div class="card-body">
+                <canvas id="statisticsChart" width="400" height="200"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Recent Analyses -->
+<div class="row mt-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5><i class="fas fa-history"></i> Analisis Terbaru</h5>
+                <a href="/history" class="btn btn-outline-light btn-sm">
+                    <i class="fas fa-eye"></i> Lihat Semua
+                </a>
+            </div>
+            <div class="card-body">
+                <div id="recentAnalysesTable">
+                    <div class="text-center">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                        <p class="mt-2">Memuat data...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- System Status -->
+<div class="row mt-4">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5><i class="fas fa-server"></i> Status Sistem</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-6">
+                        <div class="text-center">
+                            <div class="mb-2">
+                                <i class="fas fa-brain fa-2x text-primary"></i>
+                            </div>
+                            <h6>OpenAI API</h6>
+                            <span class="badge bg-success">Aktif</span>
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <div class="text-center">
+                            <div class="mb-2">
+                                <i class="fas fa-search fa-2x text-info"></i>
+                            </div>
+                            <h6>Brave Search</h6>
+                            <span class="badge bg-success">Aktif</span>
+                        </div>
+                    </div>
+                </div>
+                <hr>
+                <div class="row">
+                    <div class="col-6">
+                        <div class="text-center">
+                            <div class="mb-2">
+                                <i class="fab fa-twitter fa-2x text-primary"></i>
+                            </div>
+                            <h6>Twitter API</h6>
+                            <span class="badge bg-warning">Dummy Mode</span>
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <div class="text-center">
+                            <div class="mb-2">
+                                <i class="fas fa-database fa-2x text-success"></i>
+                            </div>
+                            <h6>Database</h6>
+                            <span class="badge bg-success">Aktif</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5><i class="fas fa-info-circle"></i> Informasi</h5>
+            </div>
+            <div class="card-body">
+                <h6>Cara Menggunakan:</h6>
+                <ul class="list-unstyled">
+                    <li><i class="fas fa-check text-success"></i> Masukkan URL tweet yang ingin dianalisis</li>
+                    <li><i class="fas fa-check text-success"></i> Sistem akan menganalisis konten hoax</li>
+                    <li><i class="fas fa-check text-success"></i> Deteksi bot dilakukan otomatis</li>
+                    <li><i class="fas fa-check text-success"></i> Visualisasi jaringan tersedia</li>
+                    <li><i class="fas fa-check text-success"></i> Laporan PDF dapat diunduh</li>
+                </ul>
+                
+                <div class="mt-3">
+                    <h6>Telegram Bot:</h6>
+                    <p class="text-muted">Gunakan bot Telegram untuk analisis cepat di mobile.</p>
+                    <button class="btn btn-info btn-sm" onclick="showTelegramInfo()">
+                        <i class="fab fa-telegram"></i> Info Bot
+                    </button>
+                </div>
+                
+                <div class="mt-3">
+                    <h6>Testing dengan Dummy Data:</h6>
+                    <p class="text-muted">Aplikasi menggunakan data dummy untuk demonstrasi.</p>
+                    <a href="/static/CONTOH_URL_DUMMY.md" target="_blank" class="btn btn-outline-info btn-sm">
+                        <i class="fas fa-list"></i> Lihat Contoh URL
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let currentSessionId = null;
+let progressInterval = null;
+let statisticsChart = null;
+
+document.addEventListener('DOMContentLoaded', function() {
+    loadStatistics();
+    loadRecentAnalyses();
+    initializeChart();
+    
+    // Setup form submission
+    document.getElementById('quickAnalysisForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+        startQuickAnalysis();
+    });
+});
+
+function loadStatistics() {
+    fetch('/api/statistics')
+        .then(response => response.json())
+        .then(data => {
+            document.getElementById('totalAnalyses').textContent = data.total_analyses;
+            document.getElementById('hoaxCount').textContent = data.hoax_count;
+            document.getElementById('botCount').textContent = data.bot_count;
+            document.getElementById('recentAnalyses').textContent = data.recent_analyses;
+            
+            updateChart(data);
+        })
+        .catch(error => {
+            console.error('Error loading statistics:', error);
+        });
+}
+
+function loadRecentAnalyses() {
+    fetch('/api/history?limit=5')
+        .then(response => response.json())
+        .then(data => {
+            const tableContainer = document.getElementById('recentAnalysesTable');
+            
+            if (data.history.length === 0) {
+                tableContainer.innerHTML = '<p class="text-muted text-center">Belum ada analisis yang dilakukan.</p>';
+                return;
+            }
+            
+            let tableHTML = `
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Tweet</th>
+                                <th>Status Hoax</th>
+                                <th>Probabilitas</th>
+                                <th>Tanggal</th>
+                                <th>Aksi</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+            `;
+            
+            data.history.forEach(item => {
+                const hoaxBadge = item.is_hoax ? 
+                    '<span class="hoax-indicator hoax-detected">HOAX</span>' : 
+                    '<span class="hoax-indicator hoax-not-detected">BUKAN HOAX</span>';
+                
+                tableHTML += `
+                    <tr>
+                        <td>
+                            <small class="text-muted">${item.tweet_text}</small>
+                        </td>
+                        <td>${hoaxBadge}</td>
+                        <td>${formatPercentage(item.hoax_probability)}</td>
+                        <td><small>${formatDate(item.created_at)}</small></td>
+                        <td>
+                            <button class="btn btn-sm btn-outline-primary" onclick="viewResult('${item.session_id}')">
+                                <i class="fas fa-eye"></i>
+                            </button>
+                        </td>
+                    </tr>
+                `;
+            });
+            
+            tableHTML += '</tbody></table></div>';
+            tableContainer.innerHTML = tableHTML;
+        })
+        .catch(error => {
+            console.error('Error loading recent analyses:', error);
+            document.getElementById('recentAnalysesTable').innerHTML = 
+                '<p class="text-danger text-center">Error loading data.</p>';
+        });
+}
+
+function initializeChart() {
+    const ctx = document.getElementById('statisticsChart').getContext('2d');
+    statisticsChart = new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+            labels: ['Hoax', 'Bukan Hoax', 'Bot', 'Bukan Bot'],
+            datasets: [{
+                data: [0, 0, 0, 0],
+                backgroundColor: [
+                    '#dc3545',
+                    '#28a745',
+                    '#ffc107',
+                    '#17a2b8'
+                ],
+                borderWidth: 0
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'bottom'
+                }
+            }
+        }
+    });
+}
+
+function updateChart(data) {
+    if (statisticsChart) {
+        const nonHoax = data.total_analyses - data.hoax_count;
+        const nonBot = data.total_users - data.bot_count;
+        
+        statisticsChart.data.datasets[0].data = [
+            data.hoax_count,
+            nonHoax,
+            data.bot_count,
+            nonBot
+        ];
+        statisticsChart.update();
+    }
+}
+
+function startQuickAnalysis() {
+    const tweetUrl = document.getElementById('tweetUrl').value;
+    
+    // Show progress
+    document.getElementById('analysisProgress').style.display = 'block';
+    document.getElementById('quickResults').style.display = 'none';
+    
+    // Submit analysis
+    const formData = new FormData();
+    formData.append('tweet_url', tweetUrl);
+    
+    fetch('/api/analyze', {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.status === 'success') {
+            currentSessionId = data.session_id;
+            startProgressTracking();
+        } else {
+            throw new Error(data.message || 'Analysis failed');
+        }
+    })
+    .catch(error => {
+        console.error('Error starting analysis:', error);
+        showAlert('Error: ' + error.message, 'danger');
+        document.getElementById('analysisProgress').style.display = 'none';
+    });
+}
+
+function startProgressTracking() {
+    progressInterval = setInterval(() => {
+        fetch(`/api/status/${currentSessionId}`)
+            .then(response => response.json())
+            .then(data => {
+                updateProgress(data);
+                
+                if (data.status === 'completed') {
+                    clearInterval(progressInterval);
+                    loadAnalysisResult();
+                } else if (data.status === 'failed') {
+                    clearInterval(progressInterval);
+                    showAlert('Analisis gagal: ' + data.error_message, 'danger');
+                    document.getElementById('analysisProgress').style.display = 'none';
+                }
+            })
+            .catch(error => {
+                console.error('Error tracking progress:', error);
+                clearInterval(progressInterval);
+            });
+    }, 2000);
+}
+
+function updateProgress(data) {
+    const progressBar = document.querySelector('.progress-bar');
+    const progressText = document.getElementById('progressText');
+    
+    progressBar.style.width = data.progress + '%';
+    
+    const messages = {
+        0: 'Memulai analisis...',
+        10: 'Memproses tweet...',
+        20: 'Ekstraksi data...',
+        30: 'Menyimpan data...',
+        50: 'Analisis hoax...',
+        60: 'Deteksi bot...',
+        70: 'Fact-checking...',
+        80: 'Analisis jaringan...',
+        90: 'Membuat laporan...',
+        95: 'Menyelesaikan...',
+        100: 'Selesai!'
+    };
+    
+    progressText.textContent = messages[data.progress] || 'Memproses...';
+}
+
+function loadAnalysisResult() {
+    fetch(`/api/result/${currentSessionId}`)
+        .then(response => response.json())
+        .then(data => {
+            displayQuickResults(data);
+            document.getElementById('analysisProgress').style.display = 'none';
+            document.getElementById('quickResults').style.display = 'block';
+            
+            // Refresh statistics
+            loadStatistics();
+            loadRecentAnalyses();
+        })
+        .catch(error => {
+            console.error('Error loading results:', error);
+            showAlert('Error loading results', 'danger');
+        });
+}
+
+function displayQuickResults(data) {
+    const resultsContainer = document.getElementById('resultsContent');
+    
+    const hoaxStatus = data.hoax_analysis.is_hoax ? 'HOAX TERDETEKSI' : 'BUKAN HOAX';
+    const hoaxClass = data.hoax_analysis.is_hoax ? 'text-danger' : 'text-success';
+    
+    const botStatus = data.bot_detection.is_bot ? 'BOT TERDETEKSI' : 'BUKAN BOT';
+    const botClass = data.bot_detection.is_bot ? 'text-warning' : 'text-info';
+    
+    resultsContainer.innerHTML = `
+        <div class="row">
+            <div class="col-md-6">
+                <div class="card border-0 bg-light">
+                    <div class="card-body text-center">
+                        <h6 class="${hoaxClass}">
+                            <i class="fas fa-exclamation-triangle"></i>
+                            ${hoaxStatus}
+                        </h6>
+                        <p class="mb-0">Probabilitas: ${formatPercentage(data.hoax_analysis.hoax_probability)}</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="card border-0 bg-light">
+                    <div class="card-body text-center">
+                        <h6 class="${botClass}">
+                            <i class="fas fa-robot"></i>
+                            ${botStatus}
+                        </h6>
+                        <p class="mb-0">Probabilitas: ${formatPercentage(data.bot_detection.bot_probability)}</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="mt-3 text-center">
+            <button class="btn btn-primary btn-sm" onclick="viewResult('${currentSessionId}')">
+                <i class="fas fa-eye"></i> Lihat Detail
+            </button>
+            <button class="btn btn-secondary btn-sm" onclick="downloadPDF('${currentSessionId}')">
+                <i class="fas fa-download"></i> Download PDF
+            </button>
+        </div>
+    `;
+}
+
+function viewResult(sessionId) {
+    window.open(`/result/${sessionId}`, '_blank');
+}
+
+function downloadPDF(sessionId) {
+    window.open(`/api/download/pdf/${sessionId}`, '_blank');
+}
+
+function refreshStats() {
+    showAlert('Memperbarui statistik...', 'info');
+    loadStatistics();
+    loadRecentAnalyses();
+}
+
+function showTelegramInfo() {
+    alert('Telegram Bot Information:\n\n' +
+          'Bot sedang dalam tahap pengembangan.\n' +
+          'Fitur yang akan tersedia:\n' +
+          '• Analisis tweet melalui URL\n' +
+          '• Notifikasi hasil analisis\n' +
+          '• Download laporan PDF\n' +
+          '• Statistik personal\n\n' +
+          'Stay tuned untuk update selanjutnya!');
+}
+</script>
+{% endblock %} 

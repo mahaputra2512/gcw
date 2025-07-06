@@ -1,0 +1,404 @@
+{% extends "base.html" %}
+
+{% block title %}Hasil Analisis - Twitter Hoax Detector{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h2><i class="fas fa-search-plus"></i> Hasil Analisis</h2>
+                <div>
+                    <a href="/analyze" class="btn btn-primary me-2">
+                        <i class="fas fa-plus"></i> Analisis Baru
+                    </a>
+                    <a href="/history" class="btn btn-outline-secondary">
+                        <i class="fas fa-history"></i> Riwayat
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Loading State -->
+    <div id="loadingState" class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-body text-center">
+                    <div class="spinner-border text-primary mb-3" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                    <h5>Memuat hasil analisis...</h5>
+                    <p class="text-muted">Mohon tunggu sebentar</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Error State -->
+    <div id="errorState" class="row" style="display: none;">
+        <div class="col-12">
+            <div class="card border-danger">
+                <div class="card-body text-center">
+                    <i class="fas fa-exclamation-triangle text-danger fa-3x mb-3"></i>
+                    <h5>Error</h5>
+                    <p id="errorMessage" class="text-danger"></p>
+                    <a href="/analyze" class="btn btn-primary">
+                        <i class="fas fa-redo"></i> Coba Lagi
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Results Container -->
+    <div id="resultsContainer" style="display: none;">
+        <!-- Tweet Information -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header">
+                        <h5><i class="fab fa-twitter"></i> Informasi Tweet</h5>
+                    </div>
+                    <div class="card-body">
+                        <div id="tweetInfo">
+                            <!-- Tweet info will be populated here -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Analysis Results -->
+        <div class="row">
+            <!-- Hoax Analysis -->
+            <div class="col-lg-6 mb-4">
+                <div class="card">
+                    <div class="card-header">
+                        <h5><i class="fas fa-exclamation-triangle"></i> Analisis Hoax</h5>
+                    </div>
+                    <div class="card-body">
+                        <div id="hoaxAnalysis">
+                            <!-- Hoax analysis will be populated here -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Bot Detection -->
+            <div class="col-lg-6 mb-4">
+                <div class="card">
+                    <div class="card-header">
+                        <h5><i class="fas fa-robot"></i> Deteksi Bot</h5>
+                    </div>
+                    <div class="card-body">
+                        <div id="botDetection">
+                            <!-- Bot detection will be populated here -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Fact Check Results -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header">
+                        <h5><i class="fas fa-search"></i> Hasil Fact-Check</h5>
+                    </div>
+                    <div class="card-body">
+                        <div id="factCheckResults">
+                            <!-- Fact check results will be populated here -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Network Visualization -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header">
+                        <h5><i class="fas fa-network-wired"></i> Visualisasi Jaringan</h5>
+                    </div>
+                    <div class="card-body">
+                        <div id="networkVisualization">
+                            <!-- Network visualization will be populated here -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Actions -->
+        <div class="row">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header">
+                        <h5><i class="fas fa-download"></i> Unduh Laporan</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="d-flex gap-2">
+                            <button id="downloadPdf" class="btn btn-success">
+                                <i class="fas fa-file-pdf"></i> Unduh PDF
+                            </button>
+                            <button id="shareResult" class="btn btn-info">
+                                <i class="fas fa-share"></i> Bagikan
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const sessionId = '{{ session_id }}';
+    loadResult(sessionId);
+    
+    // Download PDF handler
+    document.getElementById('downloadPdf').addEventListener('click', function() {
+        window.open(`/api/download/pdf/${sessionId}`, '_blank');
+    });
+    
+    // Share result handler
+    document.getElementById('shareResult').addEventListener('click', function() {
+        const url = window.location.href;
+        if (navigator.share) {
+            navigator.share({
+                title: 'Hasil Analisis Twitter Hoax Detector',
+                url: url
+            });
+        } else {
+            // Fallback: copy to clipboard
+            navigator.clipboard.writeText(url).then(() => {
+                alert('Link berhasil disalin ke clipboard!');
+            });
+        }
+    });
+});
+
+async function loadResult(sessionId) {
+    try {
+        const response = await fetch(`/api/result/${sessionId}`);
+        
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        
+        const data = await response.json();
+        displayResults(data);
+        
+    } catch (error) {
+        console.error('Error loading result:', error);
+        showError('Gagal memuat hasil analisis. ' + error.message);
+    }
+}
+
+function displayResults(data) {
+    document.getElementById('loadingState').style.display = 'none';
+    document.getElementById('resultsContainer').style.display = 'block';
+    
+    // Display tweet info
+    const tweetInfo = document.getElementById('tweetInfo');
+    tweetInfo.innerHTML = `
+        <div class="row">
+            <div class="col-md-8">
+                <h6>Tweet:</h6>
+                <p class="bg-light p-3 rounded">${data.tweet_data.text}</p>
+                <div class="row">
+                    <div class="col-6">
+                        <strong>Pengguna:</strong> @${data.tweet_data.user.username}
+                    </div>
+                    <div class="col-6">
+                        <strong>Nama:</strong> ${data.tweet_data.user.display_name}
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="row text-center">
+                    <div class="col-6">
+                        <div class="bg-primary text-white p-2 rounded">
+                            <strong>${data.tweet_data.like_count}</strong><br>
+                            <small>Likes</small>
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <div class="bg-success text-white p-2 rounded">
+                            <strong>${data.tweet_data.retweet_count}</strong><br>
+                            <small>Retweets</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    // Display hoax analysis
+    const hoaxAnalysis = document.getElementById('hoaxAnalysis');
+    const hoaxClass = data.hoax_analysis.is_hoax ? 'danger' : 'success';
+    const hoaxIcon = data.hoax_analysis.is_hoax ? 'exclamation-triangle' : 'check-circle';
+    const hoaxText = data.hoax_analysis.is_hoax ? 'HOAX TERDETEKSI' : 'TIDAK TERDETEKSI HOAX';
+    
+    hoaxAnalysis.innerHTML = `
+        <div class="text-center mb-3">
+            <div class="alert alert-${hoaxClass}">
+                <i class="fas fa-${hoaxIcon} fa-2x mb-2"></i>
+                <h5>${hoaxText}</h5>
+                <p class="mb-0">Tingkat Kepercayaan: ${(data.hoax_analysis.hoax_probability * 100).toFixed(1)}%</p>
+            </div>
+        </div>
+        <div class="progress mb-3" style="height: 20px;">
+            <div class="progress-bar bg-${hoaxClass}" role="progressbar" 
+                 style="width: ${data.hoax_analysis.hoax_probability * 100}%">
+                ${(data.hoax_analysis.hoax_probability * 100).toFixed(1)}%
+            </div>
+        </div>
+        <div class="mt-3">
+            <h6>Analisis AI:</h6>
+            <p class="text-muted">${data.hoax_analysis.openai_analysis}</p>
+        </div>
+    `;
+    
+    // Display bot detection
+    const botDetection = document.getElementById('botDetection');
+    const botClass = data.bot_detection.is_bot ? 'warning' : 'success';
+    const botIcon = data.bot_detection.is_bot ? 'robot' : 'user';
+    const botText = data.bot_detection.is_bot ? 'BOT TERDETEKSI' : 'AKUN MANUSIA';
+    
+    botDetection.innerHTML = `
+        <div class="text-center mb-3">
+            <div class="alert alert-${botClass}">
+                <i class="fas fa-${botIcon} fa-2x mb-2"></i>
+                <h5>${botText}</h5>
+                <p class="mb-0">Tingkat Kepercayaan: ${(data.bot_detection.bot_probability * 100).toFixed(1)}%</p>
+            </div>
+        </div>
+        <div class="progress mb-3" style="height: 20px;">
+            <div class="progress-bar bg-${botClass}" role="progressbar" 
+                 style="width: ${data.bot_detection.bot_probability * 100}%">
+                ${(data.bot_detection.bot_probability * 100).toFixed(1)}%
+            </div>
+        </div>
+        <div class="mt-3">
+            <h6>Metrics Pengguna:</h6>
+            <ul class="list-unstyled">
+                <li><strong>Followers:</strong> ${data.tweet_data.user.followers_count.toLocaleString()}</li>
+                <li><strong>Verified:</strong> ${data.tweet_data.user.verified ? 'Ya' : 'Tidak'}</li>
+            </ul>
+        </div>
+    `;
+    
+    // Display fact check results
+    const factCheckResults = document.getElementById('factCheckResults');
+    if (data.fact_check_results && data.fact_check_results.results) {
+        let factsHtml = '<div class="row">';
+        data.fact_check_results.results.slice(0, 3).forEach((result, index) => {
+            const stanceClass = result.stance === 'contradicting' ? 'danger' : 
+                              result.stance === 'supporting' ? 'success' : 'warning';
+            factsHtml += `
+                <div class="col-md-4 mb-3">
+                    <div class="card h-100">
+                        <div class="card-body">
+                            <h6 class="card-title">${result.title}</h6>
+                            <p class="card-text small text-muted">${result.description}</p>
+                            <div class="d-flex justify-content-between align-items-center">
+                                <span class="badge bg-${stanceClass}">${result.stance}</span>
+                                <small class="text-muted">${result.source}</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        });
+        factsHtml += '</div>';
+        factCheckResults.innerHTML = factsHtml;
+    } else {
+        factCheckResults.innerHTML = '<p class="text-muted">Tidak ada hasil fact-check yang tersedia.</p>';
+    }
+    
+    // Display network visualization
+    const networkVisualization = document.getElementById('networkVisualization');
+    const sessionId = '{{ session_id }}';
+    
+    networkVisualization.innerHTML = `
+        <div class="row">
+            <div class="col-md-6">
+                <div class="text-center mb-3">
+                    <h6><i class="fas fa-network-wired"></i> Jaringan Penyebaran</h6>
+                    <p class="text-muted">Visualisasi interaktif jaringan penyebaran tweet</p>
+                    <div class="btn-group-vertical w-100" role="group">
+                        <button class="btn btn-primary btn-sm" onclick="openNetworkVisualization('${sessionId}')">
+                            <i class="fas fa-project-diagram"></i> Lihat Jaringan
+                        </button>
+                        <button class="btn btn-info btn-sm mt-1" onclick="openInfluenceChart('${sessionId}')">
+                            <i class="fas fa-chart-bar"></i> Chart Pengaruh
+                        </button>
+                    </div>
+                </div>
+                <div class="bg-light p-3 rounded text-center">
+                    <i class="fas fa-project-diagram fa-3x text-primary mb-2"></i>
+                    <p class="small text-muted">Klik tombol di atas untuk melihat visualisasi jaringan interaktif</p>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="text-center mb-3">
+                    <h6><i class="fas fa-chart-bar"></i> Statistik Jaringan</h6>
+                    <div class="row">
+                        <div class="col-6">
+                            <div class="bg-primary text-white p-2 rounded">
+                                <strong>${data.network_data ? data.network_data.total_interactions : 0}</strong><br>
+                                <small>Total Interaksi</small>
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <div class="bg-success text-white p-2 rounded">
+                                <strong>${data.network_data ? (data.network_data.nodes ? data.network_data.nodes.length : 0) : 0}</strong><br>
+                                <small>User Terlibat</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="mt-3">
+                    <h6 class="small">Estimasi Jangkauan:</h6>
+                    <div class="progress" style="height: 20px;">
+                        <div class="progress-bar bg-info" role="progressbar" 
+                             style="width: ${Math.min(100, (data.network_data ? data.network_data.reach_estimate / 10000 : 0) * 100)}%">
+                            ${data.network_data ? (data.network_data.reach_estimate || 0).toLocaleString() : 0} users
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+function showError(message) {
+    document.getElementById('loadingState').style.display = 'none';
+    document.getElementById('errorState').style.display = 'block';
+    document.getElementById('errorMessage').textContent = message;
+}
+
+function openNetworkVisualization(sessionId) {
+    // Buka visualisasi jaringan di tab baru
+    const url = `/visualization/view/${sessionId}`;
+    window.open(url, '_blank', 'width=1200,height=800,scrollbars=yes,resizable=yes');
+}
+
+function openInfluenceChart(sessionId) {
+    // Buka chart pengaruh di tab baru
+    const url = `/influence/view/${sessionId}`;
+    window.open(url, '_blank', 'width=1000,height=600,scrollbars=yes,resizable=yes');
+}
+
+function loadNetworkVisualization() {
+    // Fallback function
+    const sessionId = '{{ session_id }}';
+    openNetworkVisualization(sessionId);
+}
+</script>
+{% endblock %} 

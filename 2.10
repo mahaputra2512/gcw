@@ -1,0 +1,25 @@
+Defaulting to user installation because normal site-packages is not writeable
+Requirement already satisfied: pydantic in c:\users\mahap\appdata\roaming\python\python312\site-packages (2.5.0)
+Collecting pydantic
+  Downloading pydantic-2.11.7-py3-none-any.whl.metadata (67 kB)
+Requirement already satisfied: annotated-types>=0.6.0 in c:\programdata\anaconda3\lib\site-packages (from pydantic) (0.6.0)
+Collecting pydantic-core==2.33.2 (from pydantic)
+  Downloading pydantic_core-2.33.2-cp312-cp312-win_amd64.whl.metadata (6.9 kB)
+Requirement already satisfied: typing-extensions>=4.12.2 in c:\users\mahap\appdata\roaming\python\python312\site-packages (from pydantic) (4.12.2)
+Collecting typing-inspection>=0.4.0 (from pydantic)
+  Downloading typing_inspection-0.4.1-py3-none-any.whl.metadata (2.6 kB)
+Downloading pydantic-2.11.7-py3-none-any.whl (444 kB)
+Downloading pydantic_core-2.33.2-cp312-cp312-win_amd64.whl (2.0 MB)
+   ---------------------------------------- 2.0/2.0 MB 1.6 MB/s eta 0:00:00
+Downloading typing_inspection-0.4.1-py3-none-any.whl (14 kB)
+Installing collected packages: typing-inspection, pydantic-core, pydantic
+  Attempting uninstall: pydantic-core
+    Found existing installation: pydantic_core 2.14.1
+    Uninstalling pydantic_core-2.14.1:
+      Successfully uninstalled pydantic_core-2.14.1
+  Attempting uninstall: pydantic
+    Found existing installation: pydantic 2.5.0
+    Uninstalling pydantic-2.5.0:
+      Successfully uninstalled pydantic-2.5.0
+
+Successfully installed pydantic-2.11.7 pydantic-core-2.33.2 typing-inspection-0.4.1

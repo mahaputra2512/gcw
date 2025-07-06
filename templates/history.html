@@ -1,0 +1,490 @@
+{% extends "base.html" %}
+
+{% block title %}Riwayat Analisis - Twitter Hoax Detector{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h1><i class="fas fa-history"></i> Riwayat Analisis</h1>
+            <div>
+                <button class="btn btn-primary" onclick="refreshHistory()">
+                    <i class="fas fa-sync-alt"></i> Refresh
+                </button>
+                <a href="/analyze" class="btn btn-success">
+                    <i class="fas fa-plus"></i> Analisis Baru
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Filters -->
+<div class="row mb-4">
+    <div class="col-md-3">
+        <select class="form-select" id="statusFilter">
+            <option value="">Semua Status</option>
+            <option value="hoax">Hoax</option>
+            <option value="not_hoax">Bukan Hoax</option>
+        </select>
+    </div>
+    <div class="col-md-3">
+        <select class="form-select" id="dateFilter">
+            <option value="">Semua Tanggal</option>
+            <option value="today">Hari Ini</option>
+            <option value="week">Minggu Ini</option>
+            <option value="month">Bulan Ini</option>
+        </select>
+    </div>
+    <div class="col-md-4">
+        <input type="text" class="form-control" id="searchInput" placeholder="Cari tweet atau username...">
+    </div>
+    <div class="col-md-2">
+        <button class="btn btn-outline-primary w-100" onclick="applyFilters()">
+            <i class="fas fa-filter"></i> Filter
+        </button>
+    </div>
+</div>
+
+<!-- Statistics Summary -->
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="card text-center">
+            <div class="card-body">
+                <h4 class="text-primary" id="totalCount">-</h4>
+                <p class="mb-0">Total Analisis</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center">
+            <div class="card-body">
+                <h4 class="text-danger" id="hoaxCount">-</h4>
+                <p class="mb-0">Hoax Terdeteksi</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center">
+            <div class="card-body">
+                <h4 class="text-success" id="cleanCount">-</h4>
+                <p class="mb-0">Bukan Hoax</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center">
+            <div class="card-body">
+                <h4 class="text-warning" id="botCount">-</h4>
+                <p class="mb-0">Bot Terdeteksi</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- History Table -->
+<div class="card">
+    <div class="card-header">
+        <h5><i class="fas fa-table"></i> Riwayat Analisis</h5>
+    </div>
+    <div class="card-body">
+        <div id="historyTableContainer">
+            <div class="text-center">
+                <div class="spinner-border text-primary" role="status">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
+                <p class="mt-2">Memuat riwayat analisis...</p>
+            </div>
+        </div>
+        
+        <!-- Pagination -->
+        <nav aria-label="History pagination" id="paginationNav" style="display: none;">
+            <ul class="pagination justify-content-center mt-3" id="pagination">
+                <!-- Pagination will be populated by JavaScript -->
+            </ul>
+        </nav>
+    </div>
+</div>
+
+<!-- Export Modal -->
+<div class="modal fade" id="exportModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Export Data</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>Pilih format export:</p>
+                <div class="d-grid gap-2">
+                    <button class="btn btn-outline-primary" onclick="exportData('csv')">
+                        <i class="fas fa-file-csv"></i> Export CSV
+                    </button>
+                    <button class="btn btn-outline-success" onclick="exportData('excel')">
+                        <i class="fas fa-file-excel"></i> Export Excel
+                    </button>
+                    <button class="btn btn-outline-danger" onclick="exportData('pdf')">
+                        <i class="fas fa-file-pdf"></i> Export PDF Summary
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Detail Modal -->
+<div class="modal fade" id="detailModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Detail Analisis</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="detailModalBody">
+                <!-- Content will be populated by JavaScript -->
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Tutup</button>
+                <button type="button" class="btn btn-primary" id="downloadPdfBtn">
+                    <i class="fas fa-download"></i> Download PDF
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let currentPage = 1;
+let totalPages = 1;
+let currentFilters = {};
+
+document.addEventListener('DOMContentLoaded', function() {
+    loadHistory();
+    loadStatistics();
+    
+    // Setup search input
+    document.getElementById('searchInput').addEventListener('input', debounce(applyFilters, 500));
+});
+
+function loadHistory(page = 1) {
+    currentPage = page;
+    
+    // Build query parameters
+    let params = new URLSearchParams({
+        page: page,
+        limit: 20
+    });
+    
+    // Add filters
+    Object.keys(currentFilters).forEach(key => {
+        if (currentFilters[key]) {
+            params.append(key, currentFilters[key]);
+        }
+    });
+    
+    fetch(`/api/history?${params}`)
+        .then(response => response.json())
+        .then(data => {
+            displayHistory(data);
+            updatePagination(data);
+        })
+        .catch(error => {
+            console.error('Error loading history:', error);
+            document.getElementById('historyTableContainer').innerHTML = 
+                '<div class="alert alert-danger">Error loading history data.</div>';
+        });
+}
+
+function displayHistory(data) {
+    const container = document.getElementById('historyTableContainer');
+    
+    if (data.history.length === 0) {
+        container.innerHTML = '<div class="alert alert-info">Tidak ada data riwayat analisis.</div>';
+        return;
+    }
+    
+    let tableHTML = `
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>No</th>
+                        <th>Tweet</th>
+                        <th>Status Hoax</th>
+                        <th>Probabilitas</th>
+                        <th>Tanggal</th>
+                        <th>Aksi</th>
+                    </tr>
+                </thead>
+                <tbody>
+    `;
+    
+    data.history.forEach((item, index) => {
+        const hoaxBadge = item.is_hoax ? 
+            '<span class="hoax-indicator hoax-detected">HOAX</span>' : 
+            '<span class="hoax-indicator hoax-not-detected">BUKAN HOAX</span>';
+        
+        const rowNumber = (currentPage - 1) * 20 + index + 1;
+        
+        tableHTML += `
+            <tr>
+                <td>${rowNumber}</td>
+                <td>
+                    <div class="text-truncate" style="max-width: 300px;" title="${item.tweet_text}">
+                        ${item.tweet_text}
+                    </div>
+                    <small class="text-muted">
+                        <a href="${item.tweet_url}" target="_blank" class="text-decoration-none">
+                            <i class="fas fa-external-link-alt"></i> Lihat Tweet
+                        </a>
+                    </small>
+                </td>
+                <td>${hoaxBadge}</td>
+                <td>
+                    <div class="progress" style="height: 20px;">
+                        <div class="progress-bar ${item.is_hoax ? 'bg-danger' : 'bg-success'}" 
+                             role="progressbar" 
+                             style="width: ${item.hoax_probability * 100}%">
+                            ${formatPercentage(item.hoax_probability)}
+                        </div>
+                    </div>
+                </td>
+                <td>
+                    <small>${formatDate(item.created_at)}</small>
+                </td>
+                <td>
+                    <div class="btn-group btn-group-sm">
+                        <button class="btn btn-outline-primary" onclick="showDetail('${item.session_id}')" title="Lihat Detail">
+                            <i class="fas fa-eye"></i>
+                        </button>
+                        <button class="btn btn-outline-secondary" onclick="downloadPDF('${item.session_id}')" title="Download PDF">
+                            <i class="fas fa-download"></i>
+                        </button>
+                        <button class="btn btn-outline-info" onclick="shareResult('${item.session_id}')" title="Share">
+                            <i class="fas fa-share"></i>
+                        </button>
+                    </div>
+                </td>
+            </tr>
+        `;
+    });
+    
+    tableHTML += '</tbody></table></div>';
+    
+    // Add bulk actions
+    tableHTML += `
+        <div class="mt-3">
+            <button class="btn btn-outline-primary btn-sm" onclick="showExportModal()">
+                <i class="fas fa-file-export"></i> Export Data
+            </button>
+            <button class="btn btn-outline-danger btn-sm" onclick="clearHistory()">
+                <i class="fas fa-trash"></i> Clear History
+            </button>
+        </div>
+    `;
+    
+    container.innerHTML = tableHTML;
+}
+
+function updatePagination(data) {
+    totalPages = data.total_pages;
+    const paginationNav = document.getElementById('paginationNav');
+    const pagination = document.getElementById('pagination');
+    
+    if (totalPages <= 1) {
+        paginationNav.style.display = 'none';
+        return;
+    }
+    
+    paginationNav.style.display = 'block';
+    
+    let paginationHTML = '';
+    
+    // Previous button
+    if (currentPage > 1) {
+        paginationHTML += `
+            <li class="page-item">
+                <a class="page-link" href="#" onclick="loadHistory(${currentPage - 1})">Previous</a>
+            </li>
+        `;
+    }
+    
+    // Page numbers
+    const startPage = Math.max(1, currentPage - 2);
+    const endPage = Math.min(totalPages, currentPage + 2);
+    
+    for (let i = startPage; i <= endPage; i++) {
+        paginationHTML += `
+            <li class="page-item ${i === currentPage ? 'active' : ''}">
+                <a class="page-link" href="#" onclick="loadHistory(${i})">${i}</a>
+            </li>
+        `;
+    }
+    
+    // Next button
+    if (currentPage < totalPages) {
+        paginationHTML += `
+            <li class="page-item">
+                <a class="page-link" href="#" onclick="loadHistory(${currentPage + 1})">Next</a>
+            </li>
+        `;
+    }
+    
+    pagination.innerHTML = paginationHTML;
+}
+
+function loadStatistics() {
+    fetch('/api/statistics')
+        .then(response => response.json())
+        .then(data => {
+            document.getElementById('totalCount').textContent = data.total_analyses;
+            document.getElementById('hoaxCount').textContent = data.hoax_count;
+            document.getElementById('cleanCount').textContent = data.total_analyses - data.hoax_count;
+            document.getElementById('botCount').textContent = data.bot_count;
+        })
+        .catch(error => {
+            console.error('Error loading statistics:', error);
+        });
+}
+
+function applyFilters() {
+    const statusFilter = document.getElementById('statusFilter').value;
+    const dateFilter = document.getElementById('dateFilter').value;
+    const searchInput = document.getElementById('searchInput').value;
+    
+    currentFilters = {
+        status: statusFilter,
+        date: dateFilter,
+        search: searchInput
+    };
+    
+    loadHistory(1); // Reset to first page
+}
+
+function refreshHistory() {
+    showAlert('Memperbarui riwayat analisis...', 'info');
+    loadHistory(currentPage);
+    loadStatistics();
+}
+
+function showDetail(sessionId) {
+    fetch(`/api/result/${sessionId}`)
+        .then(response => response.json())
+        .then(data => {
+            const modalBody = document.getElementById('detailModalBody');
+            
+            const tweetData = data.tweet_data;
+            const hoaxAnalysis = data.hoax_analysis;
+            const botDetection = data.bot_detection;
+            
+            modalBody.innerHTML = `
+                <div class="row">
+                    <div class="col-md-6">
+                        <h6>Informasi Tweet</h6>
+                        <p><strong>Text:</strong> ${tweetData.text}</p>
+                        <p><strong>Pengguna:</strong> @${tweetData.user.username}</p>
+                        <p><strong>Tanggal:</strong> ${formatDate(tweetData.created_at)}</p>
+                    </div>
+                    <div class="col-md-6">
+                        <h6>Metrics</h6>
+                        <p><strong>Retweet:</strong> ${tweetData.retweet_count}</p>
+                        <p><strong>Like:</strong> ${tweetData.like_count}</p>
+                        <p><strong>Reply:</strong> ${tweetData.reply_count}</p>
+                    </div>
+                </div>
+                
+                <hr>
+                
+                <div class="row">
+                    <div class="col-md-6">
+                        <h6>Analisis Hoax</h6>
+                        <p><strong>Status:</strong> ${hoaxAnalysis.is_hoax ? 'HOAX' : 'BUKAN HOAX'}</p>
+                        <p><strong>Probabilitas:</strong> ${formatPercentage(hoaxAnalysis.hoax_probability)}</p>
+                        <p><strong>Alasan:</strong></p>
+                        <ul>
+                            ${hoaxAnalysis.hoax_reasons.map(reason => `<li>${reason}</li>`).join('')}
+                        </ul>
+                    </div>
+                    <div class="col-md-6">
+                        <h6>Deteksi Bot</h6>
+                        <p><strong>Status:</strong> ${botDetection.is_bot ? 'BOT' : 'BUKAN BOT'}</p>
+                        <p><strong>Probabilitas:</strong> ${formatPercentage(botDetection.bot_probability)}</p>
+                        <p><strong>Followers:</strong> ${tweetData.user.followers_count}</p>
+                        <p><strong>Verified:</strong> ${tweetData.user.verified ? 'Ya' : 'Tidak'}</p>
+                    </div>
+                </div>
+            `;
+            
+            document.getElementById('downloadPdfBtn').onclick = () => downloadPDF(sessionId);
+            
+            new bootstrap.Modal(document.getElementById('detailModal')).show();
+        })
+        .catch(error => {
+            console.error('Error loading detail:', error);
+            showAlert('Error loading detail data', 'danger');
+        });
+}
+
+function downloadPDF(sessionId) {
+    window.open(`/api/download/pdf/${sessionId}`, '_blank');
+}
+
+function shareResult(sessionId) {
+    const url = `${window.location.origin}/result/${sessionId}`;
+    
+    if (navigator.share) {
+        navigator.share({
+            title: 'Hasil Analisis Hoax',
+            text: 'Lihat hasil analisis hoax tweet ini:',
+            url: url
+        });
+    } else {
+        // Fallback: copy to clipboard
+        navigator.clipboard.writeText(url).then(() => {
+            showAlert('Link berhasil disalin ke clipboard!', 'success');
+        });
+    }
+}
+
+function showExportModal() {
+    new bootstrap.Modal(document.getElementById('exportModal')).show();
+}
+
+function exportData(format) {
+    showAlert(`Preparing ${format.toUpperCase()} export...`, 'info');
+    
+    // Simulate export process
+    setTimeout(() => {
+        showAlert(`${format.toUpperCase()} export ready for download!`, 'success');
+        bootstrap.Modal.getInstance(document.getElementById('exportModal')).hide();
+    }, 2000);
+}
+
+function clearHistory() {
+    if (confirm('Apakah Anda yakin ingin menghapus semua riwayat analisis? Tindakan ini tidak dapat dibatalkan.')) {
+        showAlert('Menghapus riwayat analisis...', 'warning');
+        
+        // Simulate clear process
+        setTimeout(() => {
+            showAlert('Riwayat analisis berhasil dihapus!', 'success');
+            loadHistory(1);
+            loadStatistics();
+        }, 2000);
+    }
+}
+
+function debounce(func, wait) {
+    let timeout;
+    return function executedFunction(...args) {
+        const later = () => {
+            clearTimeout(timeout);
+            func(...args);
+        };
+        clearTimeout(timeout);
+        timeout = setTimeout(later, wait);
+    };
+}
+</script>
+{% endblock %} 

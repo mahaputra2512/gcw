@@ -1,0 +1,480 @@
+{% extends "base.html" %}
+
+{% block title %}Analisis Tweet - Twitter Hoax Detector{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h1><i class="fas fa-search"></i> Analisis Tweet</h1>
+            <a href="/" class="btn btn-outline-primary">
+                <i class="fas fa-arrow-left"></i> Kembali ke Dashboard
+            </a>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-header">
+                <h5><i class="fas fa-link"></i> Input Tweet URL</h5>
+            </div>
+            <div class="card-body">
+                <form id="analysisForm">
+                    <div class="mb-3">
+                        <label for="tweetUrl" class="form-label">URL Tweet</label>
+                        <input type="url" class="form-control" id="tweetUrl" 
+                               placeholder="https://twitter.com/username/status/1234567890" required>
+                        <div class="form-text">
+                            Masukkan URL lengkap tweet yang ingin dianalisis. Contoh format yang didukung:
+                            <ul class="mt-2">
+                                <li>https://twitter.com/username/status/1234567890</li>
+                                <li>https://x.com/username/status/1234567890</li>
+                                <li>https://mobile.twitter.com/username/status/1234567890</li>
+                            </ul>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="generatePDF" checked>
+                            <label class="form-check-label" for="generatePDF">
+                                Generate laporan PDF
+                            </label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="includeVisualization" checked>
+                            <label class="form-check-label" for="includeVisualization">
+                                Include visualisasi jaringan
+                            </label>
+                        </div>
+                    </div>
+                    
+                    <div class="d-grid gap-2">
+                        <button type="submit" class="btn btn-primary btn-lg">
+                            <i class="fas fa-play"></i> Mulai Analisis Lengkap
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+        
+        <!-- Analysis Progress -->
+        <div class="card mt-4" id="progressCard" style="display: none;">
+            <div class="card-header">
+                <h5><i class="fas fa-hourglass-half"></i> Progress Analisis</h5>
+            </div>
+            <div class="card-body">
+                <div class="progress mb-3">
+                    <div class="progress-bar" id="progressBar" role="progressbar" style="width: 0%"></div>
+                </div>
+                
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="d-flex align-items-center mb-2">
+                            <i class="fas fa-download text-muted me-2"></i>
+                            <span id="step1">Ekstraksi data tweet...</span>
+                            <i class="fas fa-check text-success ms-auto" id="check1" style="display: none;"></i>
+                        </div>
+                        <div class="d-flex align-items-center mb-2">
+                            <i class="fas fa-brain text-muted me-2"></i>
+                            <span id="step2">Analisis hoax dengan AI...</span>
+                            <i class="fas fa-check text-success ms-auto" id="check2" style="display: none;"></i>
+                        </div>
+                        <div class="d-flex align-items-center mb-2">
+                            <i class="fas fa-robot text-muted me-2"></i>
+                            <span id="step3">Deteksi bot...</span>
+                            <i class="fas fa-check text-success ms-auto" id="check3" style="display: none;"></i>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="d-flex align-items-center mb-2">
+                            <i class="fas fa-search text-muted me-2"></i>
+                            <span id="step4">Fact-checking...</span>
+                            <i class="fas fa-check text-success ms-auto" id="check4" style="display: none;"></i>
+                        </div>
+                        <div class="d-flex align-items-center mb-2">
+                            <i class="fas fa-project-diagram text-muted me-2"></i>
+                            <span id="step5">Analisis jaringan...</span>
+                            <i class="fas fa-check text-success ms-auto" id="check5" style="display: none;"></i>
+                        </div>
+                        <div class="d-flex align-items-center mb-2">
+                            <i class="fas fa-file-pdf text-muted me-2"></i>
+                            <span id="step6">Generate laporan...</span>
+                            <i class="fas fa-check text-success ms-auto" id="check6" style="display: none;"></i>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="text-center mt-3">
+                    <p class="text-muted" id="progressText">Memulai analisis...</p>
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Results -->
+        <div class="card mt-4" id="resultsCard" style="display: none;">
+            <div class="card-header">
+                <h5><i class="fas fa-chart-line"></i> Hasil Analisis</h5>
+            </div>
+            <div class="card-body" id="resultsContent">
+                <!-- Results will be populated here -->
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-4">
+        <div class="card">
+            <div class="card-header">
+                <h5><i class="fas fa-info-circle"></i> Informasi</h5>
+            </div>
+            <div class="card-body">
+                <h6>Proses Analisis:</h6>
+                <ol class="list-unstyled">
+                    <li><i class="fas fa-arrow-right text-primary"></i> Ekstraksi data tweet dan pengguna</li>
+                    <li><i class="fas fa-arrow-right text-primary"></i> Analisis konten menggunakan AI</li>
+                    <li><i class="fas fa-arrow-right text-primary"></i> Deteksi karakteristik bot</li>
+                    <li><i class="fas fa-arrow-right text-primary"></i> Pencarian fact-checking</li>
+                    <li><i class="fas fa-arrow-right text-primary"></i> Analisis jaringan penyebaran</li>
+                    <li><i class="fas fa-arrow-right text-primary"></i> Generate laporan PDF</li>
+                </ol>
+                
+                <hr>
+                
+                <h6>Estimasi Waktu:</h6>
+                <p class="text-muted">Analisis lengkap membutuhkan waktu sekitar 30-60 detik tergantung kompleksitas tweet.</p>
+                
+                <hr>
+                
+                <h6>Dummy Data:</h6>
+                <p class="text-muted">Aplikasi saat ini menggunakan dummy data untuk demonstrasi. Untuk production, aktifkan API asli.</p>
+            </div>
+        </div>
+        
+        <div class="card mt-4">
+            <div class="card-header">
+                <h5><i class="fas fa-history"></i> Analisis Terbaru</h5>
+            </div>
+            <div class="card-body">
+                <div id="recentAnalyses">
+                    <div class="text-center">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                        <p class="mt-2">Memuat data...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let currentSessionId = null;
+let progressInterval = null;
+
+document.addEventListener('DOMContentLoaded', function() {
+    loadRecentAnalyses();
+    
+    // Setup form submission
+    document.getElementById('analysisForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+        startAnalysis();
+    });
+});
+
+function loadRecentAnalyses() {
+    fetch('/api/history?limit=5')
+        .then(response => response.json())
+        .then(data => {
+            const container = document.getElementById('recentAnalyses');
+            
+            if (data.history.length === 0) {
+                container.innerHTML = '<p class="text-muted">Belum ada analisis terbaru.</p>';
+                return;
+            }
+            
+            let html = '';
+            data.history.forEach(item => {
+                const hoaxBadge = item.is_hoax ? 
+                    '<span class="badge bg-danger">HOAX</span>' : 
+                    '<span class="badge bg-success">BUKAN HOAX</span>';
+                
+                html += `
+                    <div class="mb-3 p-2 border rounded">
+                        <div class="d-flex justify-content-between align-items-start">
+                            <div>
+                                <small class="text-muted d-block">${item.tweet_text}</small>
+                                <small class="text-muted">${formatDate(item.created_at)}</small>
+                            </div>
+                            <div class="text-end">
+                                ${hoaxBadge}
+                                <div class="mt-1">
+                                    <button class="btn btn-sm btn-outline-primary" onclick="viewResult('${item.session_id}')">
+                                        <i class="fas fa-eye"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+            
+            container.innerHTML = html;
+        })
+        .catch(error => {
+            console.error('Error loading recent analyses:', error);
+            document.getElementById('recentAnalyses').innerHTML = 
+                '<p class="text-danger">Error loading data.</p>';
+        });
+}
+
+function startAnalysis() {
+    const tweetUrl = document.getElementById('tweetUrl').value;
+    
+    // Show progress card
+    document.getElementById('progressCard').style.display = 'block';
+    document.getElementById('resultsCard').style.display = 'none';
+    
+    // Reset progress
+    resetProgress();
+    
+    // Submit analysis
+    const formData = new FormData();
+    formData.append('tweet_url', tweetUrl);
+    
+    fetch('/api/analyze', {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.status === 'success') {
+            currentSessionId = data.session_id;
+            startProgressTracking();
+        } else {
+            throw new Error(data.message || 'Analysis failed');
+        }
+    })
+    .catch(error => {
+        console.error('Error starting analysis:', error);
+        showAlert('Error: ' + error.message, 'danger');
+        document.getElementById('progressCard').style.display = 'none';
+    });
+}
+
+function resetProgress() {
+    document.getElementById('progressBar').style.width = '0%';
+    document.getElementById('progressText').textContent = 'Memulai analisis...';
+    
+    // Reset all checkmarks
+    for (let i = 1; i <= 6; i++) {
+        document.getElementById(`check${i}`).style.display = 'none';
+    }
+}
+
+function startProgressTracking() {
+    progressInterval = setInterval(() => {
+        fetch(`/api/status/${currentSessionId}`)
+            .then(response => response.json())
+            .then(data => {
+                updateProgress(data);
+                
+                if (data.status === 'completed') {
+                    clearInterval(progressInterval);
+                    loadAnalysisResult();
+                } else if (data.status === 'failed') {
+                    clearInterval(progressInterval);
+                    showAlert('Analisis gagal: ' + data.error_message, 'danger');
+                    document.getElementById('progressCard').style.display = 'none';
+                }
+            })
+            .catch(error => {
+                console.error('Error tracking progress:', error);
+                clearInterval(progressInterval);
+            });
+    }, 2000);
+}
+
+function updateProgress(data) {
+    const progressBar = document.getElementById('progressBar');
+    const progressText = document.getElementById('progressText');
+    
+    progressBar.style.width = data.progress + '%';
+    
+    // Update step indicators
+    if (data.progress >= 20) {
+        document.getElementById('check1').style.display = 'inline';
+        document.getElementById('step1').innerHTML = 'Ekstraksi data tweet... <span class="text-success">Selesai</span>';
+    }
+    if (data.progress >= 40) {
+        document.getElementById('check2').style.display = 'inline';
+        document.getElementById('step2').innerHTML = 'Analisis hoax dengan AI... <span class="text-success">Selesai</span>';
+    }
+    if (data.progress >= 60) {
+        document.getElementById('check3').style.display = 'inline';
+        document.getElementById('step3').innerHTML = 'Deteksi bot... <span class="text-success">Selesai</span>';
+    }
+    if (data.progress >= 70) {
+        document.getElementById('check4').style.display = 'inline';
+        document.getElementById('step4').innerHTML = 'Fact-checking... <span class="text-success">Selesai</span>';
+    }
+    if (data.progress >= 85) {
+        document.getElementById('check5').style.display = 'inline';
+        document.getElementById('step5').innerHTML = 'Analisis jaringan... <span class="text-success">Selesai</span>';
+    }
+    if (data.progress >= 95) {
+        document.getElementById('check6').style.display = 'inline';
+        document.getElementById('step6').innerHTML = 'Generate laporan... <span class="text-success">Selesai</span>';
+    }
+    
+    // Update progress text
+    const messages = {
+        0: 'Memulai analisis...',
+        10: 'Memproses URL tweet...',
+        20: 'Ekstraksi data berhasil',
+        30: 'Menyimpan data ke database...',
+        40: 'Analisis hoax dengan AI berhasil',
+        50: 'Memproses deteksi bot...',
+        60: 'Deteksi bot berhasil',
+        70: 'Fact-checking berhasil',
+        80: 'Memproses analisis jaringan...',
+        85: 'Membuat visualisasi...',
+        90: 'Generating laporan PDF...',
+        95: 'Menyelesaikan analisis...',
+        100: 'Analisis selesai!'
+    };
+    
+    progressText.textContent = messages[data.progress] || 'Memproses...';
+}
+
+function loadAnalysisResult() {
+    fetch(`/api/result/${currentSessionId}`)
+        .then(response => response.json())
+        .then(data => {
+            displayResults(data);
+            document.getElementById('progressCard').style.display = 'none';
+            document.getElementById('resultsCard').style.display = 'block';
+            
+            // Refresh recent analyses
+            loadRecentAnalyses();
+        })
+        .catch(error => {
+            console.error('Error loading results:', error);
+            showAlert('Error loading results', 'danger');
+        });
+}
+
+function displayResults(data) {
+    const resultsContainer = document.getElementById('resultsContent');
+    
+    const tweetData = data.tweet_data;
+    const hoaxAnalysis = data.hoax_analysis;
+    const botDetection = data.bot_detection;
+    
+    resultsContainer.innerHTML = `
+        <!-- Tweet Info -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <h6><i class="fab fa-twitter"></i> Informasi Tweet</h6>
+                <div class="card bg-light">
+                    <div class="card-body">
+                        <p class="mb-2"><strong>Tweet:</strong> ${tweetData.text}</p>
+                        <p class="mb-2"><strong>Pengguna:</strong> @${tweetData.user.username} (${tweetData.user.display_name})</p>
+                        <p class="mb-0"><strong>Tanggal:</strong> ${formatDate(tweetData.created_at)}</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Main Results -->
+        <div class="row mb-4">
+            <div class="col-md-6">
+                <div class="card ${hoaxAnalysis.is_hoax ? 'border-danger' : 'border-success'}">
+                    <div class="card-header ${hoaxAnalysis.is_hoax ? 'bg-danger text-white' : 'bg-success text-white'}">
+                        <h6 class="mb-0">
+                            <i class="fas fa-exclamation-triangle"></i>
+                            ${hoaxAnalysis.is_hoax ? 'HOAX TERDETEKSI' : 'BUKAN HOAX'}
+                        </h6>
+                    </div>
+                    <div class="card-body">
+                        <p><strong>Probabilitas:</strong> ${formatPercentage(hoaxAnalysis.hoax_probability)}</p>
+                        <p><strong>Kategori:</strong> ${hoaxAnalysis.category || 'Normal'}</p>
+                        ${hoaxAnalysis.hoax_reasons && hoaxAnalysis.hoax_reasons.length > 0 ? 
+                            `<p><strong>Alasan:</strong></p><ul>${hoaxAnalysis.hoax_reasons.map(reason => `<li>${reason}</li>`).join('')}</ul>` : 
+                            ''}
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-md-6">
+                <div class="card ${botDetection.is_bot ? 'border-warning' : 'border-info'}">
+                    <div class="card-header ${botDetection.is_bot ? 'bg-warning text-dark' : 'bg-info text-white'}">
+                        <h6 class="mb-0">
+                            <i class="fas fa-robot"></i>
+                            ${botDetection.is_bot ? 'BOT TERDETEKSI' : 'BUKAN BOT'}
+                        </h6>
+                    </div>
+                    <div class="card-body">
+                        <p><strong>Probabilitas:</strong> ${formatPercentage(botDetection.bot_probability)}</p>
+                        <p><strong>Followers:</strong> ${tweetData.user.followers_count.toLocaleString()}</p>
+                        <p><strong>Verified:</strong> ${tweetData.user.verified ? 'Ya' : 'Tidak'}</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Actions -->
+        <div class="row">
+            <div class="col-12">
+                <div class="d-flex gap-2 justify-content-center">
+                    <button class="btn btn-primary" onclick="viewFullResult('${currentSessionId}')">
+                        <i class="fas fa-eye"></i> Lihat Detail Lengkap
+                    </button>
+                    <button class="btn btn-secondary" onclick="downloadPDF('${currentSessionId}')">
+                        <i class="fas fa-download"></i> Download PDF
+                    </button>
+                    <button class="btn btn-info" onclick="viewVisualization('${currentSessionId}')">
+                        <i class="fas fa-project-diagram"></i> Visualisasi Jaringan
+                    </button>
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+function viewResult(sessionId) {
+    window.open(`/result/${sessionId}`, '_blank');
+}
+
+function viewFullResult(sessionId) {
+    window.open(`/result/${sessionId}`, '_blank');
+}
+
+function downloadPDF(sessionId) {
+    window.open(`/api/download/pdf/${sessionId}`, '_blank');
+}
+
+function viewVisualization(sessionId) {
+    fetch(`/api/visualization/${sessionId}`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.visualization_path) {
+                window.open(`/${data.visualization_path}`, '_blank');
+            } else {
+                showAlert('Visualisasi tidak tersedia', 'warning');
+            }
+        })
+        .catch(error => {
+            console.error('Error loading visualization:', error);
+            showAlert('Error loading visualization', 'danger');
+        });
+}
+</script>
+{% endblock %} 
