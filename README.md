@@ -1,6 +1,6 @@
 # 🔍 Votelyzer: Exposing Hoaxes, Protecting the Digital Public Space
 
-Sistem deteksi hoax otomatis berbasis AI untuk platform Twitter dengan fitur analisis jaringan, bot detection, dan reporting yang komprehensif.
+Sistem deteksi hoax otomatis berbasis AI untuk platform Twitter (platform X) dengan fitur analisis jaringan, bot detection, dan reporting yang komprehensif.
 
 ## 📋 Fitur Utama
 
