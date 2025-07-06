@@ -49,19 +49,18 @@ Sistem deteksi hoax otomatis berbasis AI untuk platform Twitter dengan fitur ana
 - pip package manager
 
 ### ⚡ Automatic Installation (Recommended)
-
-Tim Sanapati
-Anggota:
-1. I Gede Maha (Hacker) - Member
-2. Stefanus Santori (Hustler) - Leader
-3. M. Galvin Fata (Hipster) - Member
-4. M. Faki Raihan (Hipster) - Member
-
 #### Linux/macOS:
 ```bash
 git clone https://github.com/mahaputra2512/gcw
 cd twitter-hoax-detector
 chmod +x setup.sh
 ./setup.sh
+```
+---
 
-
+## Meet Our Team 
+### Tim Sanapati:
+1. Stefanus Santori (Hustler) - Leader
+2. I Gede Maha (Hacker) - Member
+3. M. Galvin Fata (Hipster) - Member
+4. M. Faki Raihan (Hipster) - Member
