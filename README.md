@@ -58,7 +58,7 @@ chmod +x setup.sh
 ```
 ---
 
-## Meet Our Team 
+## 👥 Meet Our Team 
 ### Tim Sanapati:
 1. Stefanus Santori (Hustler) - Leader
 2. I Gede Maha (Hacker) - Member
